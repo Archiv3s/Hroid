@@ -24,7 +24,7 @@
 
 ## Download
 
-**[Starling v0.2.2](https://github.com/JuanLuci/starling/releases/latest)**. Already have Starling? Tap **Update** inside the game. New here? Download `starling-0.2.2-arm64-v8a.apk` from [the releases page](https://github.com/JuanLuci/starling/releases) and open it on the phone (Android asks you to allow installing apps from your browser or file manager).
+**[Starling v0.2.3](https://github.com/JuanLuci/starling/releases/latest)**. Already have Starling? Tap **Update** inside the game. New here? Download `starling-0.2.3-arm64-v8a.apk` from [the releases page](https://github.com/JuanLuci/starling/releases) and open it on the phone (Android asks you to allow installing apps from your browser or file manager).
 
 **You need** a 64-bit phone with Android 8 or newer and Vulkan, and about 2 GB free. Sign in with a Microsoft account that owns Minecraft: Java Edition, or play offline (most servers need the sign-in). No computer: on the first start Starling downloads the game's files from Mojang's servers and prepares them on the phone, once (79 seconds on a POCO F6 Pro, longer on slower phones). Go fishing or change the settings while it works.
 
@@ -39,6 +39,7 @@ Development happens in [starling-client/starling](https://github.com/starling-cl
 - **Bedrock Inventory:** the creative inventory shows the items and your inventory side by side, with six rows of items and a 2x2 crafting grid, and a tap takes a full stack. It is on by default; turn it off in **Options > Controls** for the Java layout.
 - **Your name and your skin:** in Options > Skin Customization, the name your worlds use and a skin from your files (or `Starling/skins`), classic or slim; a skin PNG opened with Starling is put on at once.
 - **The phone's own keyboard:** a tap on a text field brings it up and a tap beside it puts it away, on every screen. Its suggestions, autocorrect, swipe typing and clipboard in the chat, signs and books (commands and searches go without autocorrect), a Paste button on the chat bar, and Enter finishing a command when only one completion fits (`/gamemode c` runs `/gamemode creative`).
+- **Coming from Horizon Android:** Starling offers to bring its worlds and resource packs over, in the setup or over the title screen, and copies them: Horizon Android keeps its own.
 - **Your files within reach:** worlds, resource packs, shader packs, mods and screenshots live in a `Starling` folder on the phone's storage, which any file manager opens (turned down on the first start, it is offered again by the Open Pack Folder buttons). Open a `.starling`, `.hmod` or `.hnmod` file with Starling to add a pack, a world or a mod.
 - **Made for phones:** settings picked for your device on the first start, and a stats overlay for FPS, memory and temperature.
 - **Horizon's own extras:** new menus (vanilla's are one setting away), graphics presets and more, all off by default where they would change the vanilla look. See [Settings](https://playhorizon.dev/docs/settings).

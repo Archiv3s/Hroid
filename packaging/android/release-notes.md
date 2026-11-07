@@ -1,16 +1,26 @@
-**Starling 0.2.2: many more native mods, and a fix for phones that crashed on opening.**
+**Starling 0.2.3: bring your worlds over from Horizon Android.**
+
+Horizon Android and Starling are becoming one app, in [starling-client](https://github.com/starling-client/starling). Starling installs beside Horizon Android and takes nothing from it.
 
 ## Install
 
 - **Already have Starling:** tap **Update** inside the game.
-- **New here:** download **`starling-0.2.2-arm64-v8a.apk`** below and open it.
+- **New here, or coming from Horizon Android:** download **`starling-0.2.3-arm64-v8a.apk`** below and open it.
 
 ## What's new
+
+- **Coming from Horizon Android?** Starling offers to bring its worlds and resource packs over: in the setup on the first start, or over the title screen if Starling is already set up. Close Horizon Android, tap **Bring them over**, then **Use this folder** and **Allow**. They are copied: Horizon Android keeps its own.
+- **A new note for what you import:** a banner drops in across the top of the screen, with a sound, and says what each file you open with Starling added, or what went wrong.
+- **Native mods that record sound ask for the microphone:** when the game starts with one, Starling says which mod wants it and Android asks you. **Not now** stops asking for that build.
+- **The first start goes on to the title screen** once the game is prepared. It used to stay on **Starting Starling** until Starling was opened again.
+- Starling also looks for updates in the new [starling-client/starling](https://github.com/starling-client/starling) repository.
+- Compiled native mods: compile them again after this update.
+
+## New in 0.2.2
 
 - **Many more `.hnmod` native mods from [playhorizon.dev/mods](https://playhorizon.dev/mods) now compile**, like AppleSkin, Mod Menu, SmartF3, Freecam, Waymap and Distant Horizons. Open the mod's `.hnmod` with Starling, go to **Mods** and tap **Compile**.
 - **Fixed the crash on opening** on GPUs limited to 4096x4096 textures, like the PowerVR GE8320. The largest textures load at half size when they don't fit.
 - **More builds a day:** 16 instead of 8, and a build that fails gives its place back.
-- Compiled native mods: compile them again after this update.
 
 ## New in 0.2.1
 
