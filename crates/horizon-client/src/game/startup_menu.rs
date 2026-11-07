@@ -1471,10 +1471,18 @@ impl Loading {
             self.started,
             &self.progress,
         )?;
-        self.receiver = receiver;
-        self.handle = Some(handle);
+        self.follow_loader(receiver, handle);
         self.menu.reload_packs = false;
         Ok(())
+    }
+
+    /// A new generation's loader (a pack reload, or the setup's prepared files): its messages are
+    /// the ones read from now on, the last generation's `Done` being delivered or not.
+    pub(super) fn follow_loader(&mut self, receiver: Receiver<LoaderMsg>, handle: JoinHandle<()>) {
+        self.receiver = receiver;
+        self.handle = Some(handle);
+        self.loaded = None;
+        self.delivered = false;
     }
 }
 
@@ -1634,6 +1642,29 @@ mod tests {
         }
         loading.poll_menu_resources().unwrap();
         assert!(loading.loaded.is_none());
+    }
+
+    #[test]
+    fn a_new_loader_is_read_after_a_failed_generation() {
+        // No game files yet: the first generation fails, and the setup shows.
+        let (sender, receiver) = std::sync::mpsc::channel();
+        sender
+            .send(LoaderMsg::Done(Err("no game files".into())))
+            .unwrap();
+        let mut loading = loading(receiver);
+        loading.poll_menu_resources().unwrap();
+        assert!(matches!(loading.loaded.take(), Some(Err(e)) if e == "no game files"));
+        // Prepared: a loader of its own, whose result has to arrive (Loading::retry).
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            sender
+                .send(LoaderMsg::Done(Err("second generation".into())))
+                .unwrap();
+        });
+        worker.join().unwrap();
+        loading.follow_loader(receiver, std::thread::spawn(|| {}));
+        loading.poll_menu_resources().unwrap();
+        assert!(matches!(loading.loaded.take(), Some(Err(e)) if e == "second generation"));
     }
 
     #[test]
