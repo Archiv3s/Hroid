@@ -203,17 +203,23 @@ fn folder_offer(setup: &Setup) -> Option<super::files_offer::Stage> {
     })
 }
 
-/// Written once the player is done with the offer of Horizon Android's worlds (Next or Skip): it
-/// is not made again.
+/// Written once Horizon Android's worlds came over (Next here, Done over the title,
+/// game/files_offer.rs): the offer is not made again.
 #[cfg(target_os = "android")]
-fn horizon_answered() -> std::path::PathBuf {
+pub(super) fn horizon_answered() -> std::path::PathBuf {
     horizon_client::logging::private_home().join("horizon-android-import-answered")
 }
+
+/// Skip here or Not now over the title: not offered again until the next start, when the title
+/// offers it again while Horizon Android is installed.
+#[cfg(target_os = "android")]
+pub(super) static HORIZON_LATER: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 /// Whether to offer Horizon Android's worlds and packs: it is installed, and not answered yet.
 #[cfg(target_os = "android")]
 fn horizon_offer(setup: &Setup) -> bool {
-    if horizon_answered().exists() {
+    if horizon_answered().exists() || HORIZON_LATER.load(std::sync::atomic::Ordering::Relaxed) {
         return false;
     }
     setup.horizon_installed.get().unwrap_or_else(|| {
@@ -704,7 +710,11 @@ impl Loading {
             }
             #[cfg(target_os = "android")]
             Action::HorizonDone => {
-                let _ = std::fs::write(horizon_answered(), b"");
+                if self.setup.horizon_picked {
+                    let _ = std::fs::write(horizon_answered(), b"");
+                } else {
+                    HORIZON_LATER.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
             }
             Action::SignIn => {
                 self.setup.offline_asked = false;

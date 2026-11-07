@@ -2,7 +2,12 @@
 //! Starling folder any file manager opens). Android's "all files" setting does the allowing, in a
 //! task of its own; once allowed, a restart moves the player's files (android.rs
 //! `game_folder`). Turned down, it comes back from the folder buttons (Open Pack Folder...).
+//!
+//! After it, the offer of Horizon Android's worlds and resource packs (HorizonImport.java), for a
+//! player who set Starling up before the setup made it (game/setup.rs): on every start while
+//! Horizon Android is installed, until they came over.
 use super::Game;
+use super::setup::{HORIZON_LATER, horizon_answered};
 use horizon_client::{
     hud::HudBatch,
     ui_theme::{Face, Ui, color},
@@ -25,9 +30,19 @@ pub(super) enum Stage {
     Restart,
 }
 
+/// The card over the title.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Card {
+    Folder(Stage),
+    /// Horizon Android's worlds and packs: true once the player picked its folder.
+    Horizon(bool),
+}
+
 #[derive(Default)]
 pub(super) struct FilesOffer {
     stage: Option<Stage>,
+    /// Horizon Android's offer, shown when the folder's is not: true once its folder is picked.
+    horizon: Option<bool>,
     started: bool,
     /// Made again from a folder button (Open Pack Folder...): it shows over any screen.
     asked: bool,
@@ -68,6 +83,27 @@ pub(super) fn texts(stage: Stage) -> [&'static str; 4] {
     }
 }
 
+fn card_texts(card: Card) -> [&'static str; 4] {
+    match card {
+        Card::Folder(stage) => texts(stage),
+        Card::Horizon(false) => [
+            "Coming from Horizon Android?",
+            "Horizon Android is part of Starling now: bring your worlds and resource packs over. \
+             Close Horizon Android first, then, in the folder that opens, tap Use this folder and \
+             Allow. They are copied: Horizon Android keeps its own.",
+            "Bring them over",
+            "Not now",
+        ],
+        Card::Horizon(true) => [
+            "Coming from Horizon Android?",
+            "Your worlds and resource packs are on their way: the note at the top says what each \
+             one added. Tap Done when they are in.",
+            "Done",
+            "Pick the folder again",
+        ],
+    }
+}
+
 /// The UI's scale for a window of `w` x `h` pixels (as `Ui::new`).
 fn density(w: f32, h: f32) -> f32 {
     (w / 1040.0).min(h / 700.0).clamp(1.0, 4.0)
@@ -87,6 +123,12 @@ impl Game<'_> {
                 } else {
                     Stage::Ask
                 });
+            }
+            if !horizon_answered().exists()
+                && !HORIZON_LATER.load(std::sync::atomic::Ordering::Relaxed)
+                && crate::android::horizon_android_installed()
+            {
+                offer.horizon = Some(false);
             }
         }
         if matches!(offer.stage, Some(Stage::Ask | Stage::Waiting))
@@ -112,18 +154,23 @@ impl Game<'_> {
         offer.asked = true;
     }
 
-    pub(super) fn files_offer_shown(&self) -> Option<Stage> {
-        self.files_offer
-            .stage
-            .filter(|_| self.title.is_some() || self.files_offer.asked)
+    pub(super) fn files_offer_shown(&self) -> Option<Card> {
+        let offer = &self.files_offer;
+        if let Some(stage) = offer.stage.filter(|_| self.title.is_some() || offer.asked) {
+            return Some(Card::Folder(stage));
+        }
+        offer
+            .horizon
+            .filter(|_| self.title.is_some())
+            .map(Card::Horizon)
     }
 
     /// A card in the middle of the title screen, the rest dimmed.
     pub(super) fn draw_files_offer(&self, batch: &mut HudBatch) {
-        let Some(stage) = self.files_offer_shown() else {
+        let Some(card) = self.files_offer_shown() else {
             return;
         };
-        let [title, body, primary, other] = texts(stage);
+        let [title, body, primary, other] = card_texts(card);
         let mut ui = Ui::new(&self.gui.atlas, batch, (-1.0, -1.0));
         let (w, h) = (ui.w, ui.h);
         ui.fill(0.0, 0.0, w, h, color::with_alpha(color::BG, 0.72));
@@ -179,7 +226,7 @@ impl Game<'_> {
 
     /// While the card shows it takes every touch; a lifted finger on a button acts.
     pub(super) fn files_offer_touch(&mut self, touch: &Touch) -> bool {
-        let Some(stage) = self.files_offer_shown() else {
+        let Some(card) = self.files_offer_shown() else {
             return false;
         };
         if touch.phase != TouchPhase::Ended {
@@ -192,22 +239,43 @@ impl Game<'_> {
             p[0] >= r[0] && p[0] <= r[0] + r[2] && p[1] >= r[1] && p[1] <= r[1] + r[3]
         };
         let [primary, other] = self.files_offer.buttons.get();
-        let offer = &mut self.files_offer;
-        if inside(primary) {
-            match stage {
-                Stage::Ask | Stage::Waiting => {
-                    crate::android::open_file_access_settings();
-                    offer.stage = Some(Stage::Waiting);
-                }
-                Stage::Restart => crate::android::restart_app(),
-            }
+        let button = if inside(primary) {
+            0
         } else if inside(other) {
-            if stage != Stage::Restart {
-                let _ = std::fs::write(declined(), b"");
+            1
+        } else {
+            return true;
+        };
+        let offer = &mut self.files_offer;
+        match (card, button) {
+            (Card::Folder(Stage::Ask | Stage::Waiting), 0) => {
+                crate::android::open_file_access_settings();
+                offer.stage = Some(Stage::Waiting);
             }
-            // Later: the next start moves the files anyway.
-            offer.stage = None;
-            offer.asked = false;
+            (Card::Folder(Stage::Restart), 0) => crate::android::restart_app(),
+            (Card::Folder(stage), _) => {
+                if stage != Stage::Restart {
+                    let _ = std::fs::write(declined(), b"");
+                }
+                // Later: the next start moves the files anyway.
+                offer.stage = None;
+                offer.asked = false;
+            }
+            (Card::Horizon(false), 0) | (Card::Horizon(true), 1) => {
+                if crate::android::import_horizon_android() {
+                    offer.horizon = Some(true);
+                } else {
+                    self.imports.say_failed("No folder picker opened".into());
+                }
+            }
+            (Card::Horizon(true), _) => {
+                let _ = std::fs::write(horizon_answered(), b"");
+                offer.horizon = None;
+            }
+            (Card::Horizon(false), _) => {
+                HORIZON_LATER.store(true, std::sync::atomic::Ordering::Relaxed);
+                offer.horizon = None;
+            }
         }
         true
     }
