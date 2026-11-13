@@ -9,5 +9,8 @@ fn scythe_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
     if m::cooldown() > 0 {
         return;
     }
+    if !m::start_chain(game) {
+        return;
+    }
     m::start_cooldown();
 }
