@@ -1,0 +1,10 @@
+[mod]
+id = "scythe"
+version = "0.1.0"
+
+[api]
+path = "engine"
+
+[compatibility]
+# Latest main of horizon-rust/horizon when this was written. Not a tested build pin.
+horizon_revision = "441f49d57e344bd56b90fd4af5c4e443ff3937c9"

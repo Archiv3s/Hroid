@@ -1,7 +1,8 @@
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use horizon_client::mod_api::{EquipmentSlot, Flow, Host, Hooks, KeyEvent, NetFromClientEvent, ServerTickEvent};
+use horizon_client::mod_api::{CriticalHitEvent, Flow, Host, Hooks, HurtEnemyEvent, KeyEvent, NetFromClientEvent, ServerTickEvent};
 
 // Player ids are u128 in NativeServerPlayer.uuid.
 type Uuid = u128;
@@ -13,7 +14,14 @@ const RANGE: f64 = 16.0;
 const CONE_COS: f64 = 0.966;
 const COOLDOWN: Duration = Duration::from_secs(4);
 const CHAIN_TIME: Duration = Duration::from_secs(2);
+// Index into SOUND_SOURCES for the player category (index 7 in the list read from the docs).
+const SOURCE_PLAYER: usize = 7;
 const SOUND_CHAIN: &str = "minecraft:block.chain.place";
+const SOUND_CRIT: &str = "minecraft:entity.player.attack.crit";
+
+// critical_hit runs before the hit lands; hurt_enemy reads and clears this for the same blow.
+// A crit that does no damage leaves the flag set until the next hit, which is a known gap.
+static CRIT_PENDING: AtomicBool = AtomicBool::new(false);
 
 struct Chain {
     player: Uuid,
@@ -112,7 +120,25 @@ impl Hooks for Scythe {
             until: Instant::now() + CHAIN_TIME,
         });
         mark_used(me.uuid);
-        let _ = host.play_sound(SOUND_CHAIN, eye, 0.8, 1.2);
+        let _ = host.play_sound(SOUND_CHAIN, eye, SOURCE_PLAYER, 0.8, 1.2);
+        Flow::Continue
+    }
+
+    fn critical_hit(&self, event: &mut CriticalHitEvent<'_>) -> Flow {
+        CRIT_PENDING.store(event.critical, Ordering::SeqCst);
+        Flow::Continue
+    }
+
+    fn hurt_enemy(&self, host: &mut dyn Host, event: &mut HurtEnemyEvent<'_>) -> Flow {
+        let crit = CRIT_PENDING.swap(false, Ordering::SeqCst);
+        if !crit || event.stack.item != SCYTHE {
+            return Flow::Continue;
+        }
+        let dimension = host.dimension();
+        if let Some(mob) = host.mob(&dimension, event.entity) {
+            let _ = host.play_sound(SOUND_CRIT, mob.position, SOURCE_PLAYER, 1.0, 0.8);
+        }
+        host.kill_mob(&dimension, event.entity);
         Flow::Continue
     }
 
