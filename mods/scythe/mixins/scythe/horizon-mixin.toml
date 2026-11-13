@@ -17,3 +17,23 @@ helper = "tick.rs"
 bindings = [
   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
 ]
+
+[[injection]]
+id = "attack-target"
+kind = "HEAD"
+target = "horizon_client::game::Game<'_>::attack_mob"
+helper = "attack_target.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "index", ty = "usize", value = "index" },
+]
+
+[[injection]]
+id = "melee-result"
+kind = "RETURN"
+target = "horizon_client::game::Game<'_>::melee_damage"
+helper = "melee_result.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "value", ty = "(f32, f32, bool, bool)", value = "$value" },
+]
