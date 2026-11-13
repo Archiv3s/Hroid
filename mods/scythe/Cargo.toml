@@ -1,0 +1,10 @@
+[package]
+name = "horizon-mod-scythe"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Black scythe for Horizon: chain a mob with P. Unbuilt draft."
+
+[lib]
+path = "engine/src/lib.rs"

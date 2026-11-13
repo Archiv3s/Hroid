@@ -1,10 +1,10 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use horizon_client::mod_api::{
-    CriticalHitEvent, EquipmentSlot, Flow, Host, Hooks, KeyEvent, NetFromClientEvent,
-    ServerTickEvent, Uuid,
-};
+use horizon_client::mod_api::{EquipmentSlot, Flow, Host, Hooks, KeyEvent, NetFromClientEvent, ServerTickEvent};
+
+// Player ids are u128 in NativeServerPlayer.uuid.
+type Uuid = u128;
 
 const CHANNEL: &str = "scythe:chain";
 const SCYTHE: &str = "scythe:black_scythe";
@@ -13,9 +13,7 @@ const RANGE: f64 = 16.0;
 const CONE_COS: f64 = 0.966;
 const COOLDOWN: Duration = Duration::from_secs(4);
 const CHAIN_TIME: Duration = Duration::from_secs(2);
-const SOURCE_PLAYER: usize = 7;
 const SOUND_CHAIN: &str = "minecraft:block.chain.place";
-const SOUND_CRIT: &str = "minecraft:entity.player.attack.crit";
 
 struct Chain {
     player: Uuid,
@@ -105,7 +103,6 @@ impl Hooks for Scythe {
         }
 
         let Some((_, mob)) = best else {
-            host.action_bar(me.uuid, "No mob in sight to chain");
             return Flow::Continue;
         };
         CHAINS.lock().unwrap().push(Chain {
@@ -115,8 +112,7 @@ impl Hooks for Scythe {
             until: Instant::now() + CHAIN_TIME,
         });
         mark_used(me.uuid);
-        let _ = host.play_sound(SOUND_CHAIN, eye, SOURCE_PLAYER, 0.8, 1.2);
-        host.action_bar(me.uuid, "Chained");
+        let _ = host.play_sound(SOUND_CHAIN, eye, 0.8, 1.2);
         Flow::Continue
     }
 
@@ -145,17 +141,6 @@ impl Hooks for Scythe {
             let speed = (dist * 0.15).min(1.2);
             host.push_mob(&c.dimension, c.mob, scale(d, speed / dist));
         }
-    }
-
-    fn critical_hit(&self, host: &mut dyn Host, event: &mut CriticalHitEvent<'_>) -> Flow {
-        let held = host.player_equipment(event.attacker, EquipmentSlot::Mainhand);
-        if !held.is_some_and(|s| s.item == SCYTHE) {
-            return Flow::Continue;
-        }
-        let at = event.target_position;
-        let _ = host.play_sound(SOUND_CRIT, at, SOURCE_PLAYER, 1.0, 0.8);
-        host.kill_mob(&event.dimension, event.target_id);
-        Flow::Continue
     }
 }
 
